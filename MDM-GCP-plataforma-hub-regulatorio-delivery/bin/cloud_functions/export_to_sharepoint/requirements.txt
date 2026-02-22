@@ -1,0 +1,10 @@
+#package for Gen2 GCP
+functions-framework==3.*
+# Function dependencies, for example:
+# package>=version
+gcsfs
+fsspec
+shareplum==0.5.1
+requests==2.26.0
+requests_ntlm==1.1.0
+google-cloud-secret-manager

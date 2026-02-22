@@ -1,0 +1,71 @@
+pipeline {
+	
+   	agent {
+		docker { image 'rmcdevops/docker-data-gcp:1.0.1'
+                 args '-v /root:/root'
+                }
+	}
+    environment {
+
+        FUNCION_EXPORT_TO_SHAREPOINT = "bin/cloud_functions/export_to_sharepoint"
+    }
+    stages {
+        stage('deployment manager trsv') {
+            environment {
+                
+                // En las pipeline de jenkins se define la ramas a ejecutar
+                PROJECT_ID="${env.BRANCH_NAME == 'prod' ? 'rs-prd-dlk-dd-trsv-2543' : env.BRANCH_NAME == 'non-prod-dd' ? 'rs-nprd-dlk-dd-trsv-ede4' : 'rs-nprd-dlk-dt-trsv-digt-f7ef' }"
+                COMPOSER_BUCKET="${env.BRANCH_NAME == 'prod' ? 'us-east4-ue4-prod-com-gco-t-fa3002ce-bucket' : env.BRANCH_NAME == 'non-prod-dd' ? 'us-east4-ue4-dd-com-gco-tra-566ac1e5-bucket' : 'us-east4-ue4-dt-com-gco-tra-ceaa4862-bucket'  }"
+                CREDENTIALS_ID="${env.BRANCH_NAME == 'prod' ? 'data-gcp-trsv-credential-prod' : env.BRANCH_NAME == 'non-prod-dd' ? 'data-gcp-trsv-credential-datadomain' : 'data-gcp-trsv-credential'  }"
+            }
+            
+            steps {
+                withCredentials([file(credentialsId: "${env.CREDENTIALS_ID}", variable: 'GC_KEY')]) {
+					sh("gcloud auth activate-service-account --key-file=${GC_KEY} --project ${env.PROJECT_ID} -q")
+  				}
+                sh """gcloud builds submit --config=workflow_composer.yaml --substitutions=_COMPOSER_BUCKET=${env.COMPOSER_BUCKET} """
+            }
+        }
+        stage('Deploy Cloud Function export_to_sharepoint') {
+
+			environment {
+                
+                // En las pipeline de jenkins se define la ramas a ejecutar (cf)     
+                PROJECT_ID="${env.BRANCH_NAME == 'prod' ? 'rs-shr-all-prd-expo-5ee2' : env.BRANCH_NAME == 'non-prod-dd' ? 'rs-nprd-dlk-dd-expo-5dd2' : 'rs-nprd-dlk-dt-expo-22f1' }"
+                EXPORT_BUCKET="${env.BRANCH_NAME == 'prod' ? 'ue4-prod-dd-expo-gcs-norm-001' : env.BRANCH_NAME == 'non-prod-dd' ? 'ue4-nonprod-dd-expo-gcs-norm-001' : 'ue4-nonprod-dt-expo-gcs-norm-001'  }"
+                CREDENTIALS_ID="${env.BRANCH_NAME == 'prod' ? 'svc_expo_gcp_prod' : env.BRANCH_NAME == 'non-prod-dd' ? 'svc_expo_gcp_test' : 'rs-nprd-dlk-dt-expo-22f1'  }"
+                SERVICE_ACCOUNT_CF="${env.BRANCH_NAME == 'prod' ? 'sa-prd-dd-expo-norm-gcs-shrp@rs-shr-all-prd-expo-5ee2.iam.gserviceaccount.com' : env.BRANCH_NAME == 'non-prod-dd' ? 'sa-nprd-dd-expo-norm-gcs-shrp@rs-nprd-dlk-dd-expo-5dd2.iam.gserviceaccount.com' : 'sa-nprd-dt-expo-norm-gcs-shrp@rs-nprd-dlk-dt-expo-22f1.iam.gserviceaccount.com'  }"
+				 // variables del cloud function  
+				SECRETS_PROJECT_ID  = "rs-sec-kvault-secrets-3fac"
+				SHAREPOINT_DOMAIN = "cs_hubregulatorio@rimac.com.pe"
+				SHAREPOINT_PWD = "gsm_ue4_aut_norm_dev_sadproc_shrpt_001"
+				GCP_REGION = "us-east4"
+				PATH_BIN_GCF = "deploy/cloud_functions/gcf_hr_export_to_sharepoint"
+				// sites de sharepoint segun ramas a ejecutar       
+				SHAREPOINT_SITE = "https://rimacsegurosperu.sharepoint.com"
+				SHAREPOINT_URL =  "${env.BRANCH_NAME == 'prod' ? 'https://rimacsegurosperu.sharepoint.com/sites/co03/hub-regulatorio' : env.BRANCH_NAME == 'non-prod-dd' ? 'https://rimacsegurosperu.sharepoint.com/sites/testhr' : 'https://rimacsegurosperu.sharepoint.com/sites/ejemplohr' }"
+				SHAREPOINT_FOLDER = "${env.BRANCH_NAME == 'prod' ? '/sites/co03/hub-regulatorio/hub_regulatorio' : env.BRANCH_NAME == 'non-prod-dd' ? '/sites/testhr/Documentos_compartidos/hub_regulatorio' : '/sites/ejemplohr/Documentos_compartidos/hub_regulatorio' }"
+            }
+            steps {
+                withCredentials([file(credentialsId: "${env.CREDENTIALS_ID}", variable: 'GC_KEY')]) {
+					sh("gcloud auth activate-service-account --key-file=${GC_KEY} --project ${env.PROJECT_ID} -q")
+  				}
+					sh "cd ${env.FUNCION_EXPORT_TO_SHAREPOINT} && zip -r export_to_sharepoint.zip *"
+					sh "gsutil cp ${env.FUNCION_EXPORT_TO_SHAREPOINT}/export_to_sharepoint.zip gs://${env.EXPORT_BUCKET}/$PATH_BIN_GCF/"
+					//sh "./bin/dependencias_para_deploy.sh"          
+
+					sh """ 
+						echo "N" | gcloud functions deploy gcf_export_to_sharepoint --memory 256MB --runtime python39 \
+						--source gs://$EXPORT_BUCKET/$PATH_BIN_GCF/export_to_sharepoint.zip \
+						--trigger-bucket $EXPORT_BUCKET \
+						--project $PROJECT_ID \
+						--timeout 540s \
+						--service-account $SERVICE_ACCOUNT_CF \
+						--region $GCP_REGION --entry-point copy_to_sharepoint --gen2\
+						--update-labels ^#^name=gcf_export_to_sharepoint#entorno=nonprod#proyecto=hub_regulatorio#dominio=rimac#responsable=alexis#estado_operacion=proyecto#descripcion=cf_que_envio_archivos_bucket_a_sharepoint \
+						--set-env-vars  ^#^PROJECT_ID=$PROJECT_ID#SHAREPOINT_PWD=$SHAREPOINT_PWD#SHAREPOINT_DOMAIN=$SHAREPOINT_DOMAIN#SECRETS_PROJECT_ID=$SECRETS_PROJECT_ID#SHAREPOINT_SITE=$SHAREPOINT_SITE#SHAREPOINT_URL=$SHAREPOINT_URL#SHAREPOINT_FOLDER=$SHAREPOINT_FOLDER
+						"""
+			}
+     	}
+    }
+}

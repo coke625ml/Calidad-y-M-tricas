@@ -1,0 +1,29 @@
+steps:
+- name: gcr.io/cloud-builders/gsutil
+  args: ['cp','-r','.', 'gs://${_COMPOSER_BUCKET}/${_PATH_BIN_COM}/']
+  dir: $_FUNCION_COMPOSER
+  id: 'COPY DAG COMPOSER'
+
+- name: gcr.io/cloud-builders/gsutil
+  args: ['cp','-r','.', 'gs://${_COMPOSER_BUCKET}/${_PATH_BIN_COM_PYTHON}/']
+  dir: $_FUNCION_COMPOSER_PYTHON
+  id: 'COPY DATAPROC SCRIPTS EN COMPOSER'
+
+- name: gcr.io/cloud-builders/gsutil
+  args: ['cp','-r','.', 'gs://${_COMPOSER_BUCKET}/${_PATH_BIN_COM_SQL}/']
+  dir: $_FUNCION_COMPOSER_SQL
+  id: 'COPY SQL SCRIPTS DAG COMPOSER'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+    _COMPOSER_BUCKET: bucket-default
+    _PATH_BIN_COM: dags/hub_regulatorio/delivery
+    _PATH_BIN_COM_PYTHON: dataproc/hub_regulatorio/delivery
+    _PATH_BIN_COM_SQL: dags/sql/hub_regulatorio
+    _FUNCION_COMPOSER: bin/dags/
+    _FUNCION_COMPOSER_PYTHON: bin/scripts-python/
+    _FUNCION_COMPOSER_SQL: bin/scripts-sql/
+
+tags: ['cloud-builders-community']

@@ -1,0 +1,24 @@
+{
+    "dag_id":"ue4_{env}_com_gco_norm_991_dag_dlv_prueba_pdf",
+    "create_disposition":"CREATE_NEVER", 
+    "scripts": [
+        {
+            "script_names": {
+            
+                "prueba_pdf": {}
+            }
+        }
+    ],
+    "retries":"0",
+    "retry_delay":"0",
+    "dependencies_table":"`{project_id_raw}.de__datalake.config_dependencias_dag`",
+    "dag_dependencies": [
+
+    ],
+    "mail_responsables": ["jlinaresp@rimac.com.pe","xt8535@rimac.com.pe"],
+    "labels_adicionales": [
+        {
+            "unidad_org" : "n3_004"
+        }
+    ]
+}

@@ -1,0 +1,42 @@
+{
+    "dag_id":"ue4_{env}_com_gco_norm_002_dag_dlv_rpn_0005",
+    "create_disposition":"CREATE_NEVER",
+    "scripts": [
+        {
+            
+            "script_names": {
+                "rpn_0005": {
+                    "config_spark" : {
+                        "spark.reducer.fetchMigratedShuffle.enabled": "true",
+                        "spark.executor.cores": "16",
+                        "spark.executor.memory": "16g",
+                        "spark.executor.instances": "2",
+                        "spark.driver.cores": "16",
+                        "spark.driver.memory": "16g",
+                        "spark.dataproc.driver.compute.tier": "standard",
+                        "spark.dataproc.executor.compute.tier": "standard",
+                        "spark.akka.frameSize": "1000",
+                        "spark.default.parallelism": "300",
+    					"spark.dynamicAllocation.maxExecutors": "8",
+                        "spark.sql.autoBroadcastJoinThreshold": "-1" 
+                    }
+                },
+                "rpn_0005_exp": {}
+            }
+        }
+    ],
+    "retries":"0",
+    "retry_delay":"0",
+    "dependencies_table":"`{project_id_raw}.de__datalake.config_dependencias_dag`",
+    "dag_dependencies": [
+        "ue4_{env}_com_gco_norm_001_dag_univ_modelo_comercial",
+        "ue4_{env}_com_gco_norm_002_dag_univ_modelo_poliza",
+        "ue4_{env}_com_gco_norm_003_dag_univ_modelo_persona"
+    ],
+    "mail_responsables": ["jlinaresp@rimac.com.pe","xt8535@rimac.com.pe"],
+    "labels_adicionales": [
+        {
+            "unidad_org" : "n3_001"
+        }
+    ]
+}
